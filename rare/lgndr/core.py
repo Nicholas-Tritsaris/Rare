@@ -20,6 +20,7 @@ from legendary.models.manifest import ManifestMeta
 from rare.lgndr.downloader.mp.manager import DLManager
 from rare.lgndr.glue.exception import LgndrException, LgndrLogHandler
 from rare.lgndr.lfs.lgndry import LGDLFS
+from rare.utils.account_manager import AccountManager
 
 legendary.core.DLManager = DLManager
 legendary.core.LGDLFS = LGDLFS
@@ -29,6 +30,8 @@ legendary.core.LGDLFS = LGDLFS
 class LegendaryCore(LegendaryCoreReal):
 
     def __init__(self, *args, **kwargs):
+        self.account_manager = AccountManager()
+        self.account_manager.activate_last_used_account()
         super(LegendaryCore, self).__init__(*args, **kwargs)
         self.log.info("Using Rare's LegendaryCore monkey")
         self.log.info("Using config in %s", self.lgd.path)
@@ -63,6 +66,8 @@ class LegendaryCore(LegendaryCoreReal):
         self.log.addHandler(handler)
         try:
             ret = super().auth_code(code)
+            if ret:
+                self.account_manager.add_account()
         except LgndrException as ret:
             raise ret
         finally:
@@ -74,6 +79,8 @@ class LegendaryCore(LegendaryCoreReal):
         self.log.addHandler(handler)
         try:
             ret = super().auth_ex_token(code)
+            if ret:
+                self.account_manager.add_account()
         except LgndrException as ret:
             raise ret
         finally:
@@ -85,6 +92,8 @@ class LegendaryCore(LegendaryCoreReal):
         self.log.addHandler(handler)
         try:
             ret = super().auth_import()
+            if ret:
+                self.account_manager.add_account()
         except LgndrException as ret:
             raise ret
         finally:
