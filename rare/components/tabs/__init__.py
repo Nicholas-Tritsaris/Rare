@@ -46,7 +46,7 @@ class MainTabWidget(QTabWidget):
         self.setTabEnabled(self.downloads_index, not self.args.offline)
 
         if not self.args.offline:
-            self.store_tab = StoreTab(self.core, parent=self)
+            self.store_tab = StoreTab(self.rcore, parent=self)
             self.store_index = self.addTab(self.store_tab, self.tr("Store (Beta)"))
             self.setTabEnabled(self.store_index, not self.args.offline)
 
