@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QLabel, QWidget
 from shiboken6 import Shiboken
 
 from rare.utils.qt_requests import QtRequests
+from rare.widgets.loading_widget import QLoadingIndicator
 
 
 class ImageSize(Enum):
@@ -141,3 +142,15 @@ class LoadingImageWidget(ImageWidget):
             return
         self.url = url
         self.manager.get(url, self._on_image_ready)
+
+
+class LoadingSpinnerImageWidget(ImageWidget):
+    def __init__(self, parent=None, size: Optional[QSize] = None):
+        super().__init__(parent, size)
+        self.spinner = QLoadingIndicator(parent=self)
+        self.image_loaded.connect(self.spinner.stop)
+
+    def set_url(self, url: str, high_res_url: str = None, callback=None) -> None:
+        super().set_url(url, high_res_url, callback)
+        if not self.loaded and self.loading:
+            self.spinner.start()
