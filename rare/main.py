@@ -169,13 +169,8 @@ def main() -> int:
         return -1
 
     from rare.components import start
-    from rare.utils.misc import ExitCodes
 
-    exit_code = start(args)
-    if exit_code == ExitCodes.RESTART:
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-
-    return exit_code
+    return start(args)
 
 
 if __name__ == "__main__":

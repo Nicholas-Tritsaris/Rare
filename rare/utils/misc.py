@@ -26,7 +26,6 @@ logger = getLogger("Utils")
 class ExitCodes(IntEnum):
     EXIT = 0
     LOGOUT = -133742
-    RESTART = -133743
 
 
 color_role_map: Dict[int, str] = {
