@@ -31,6 +31,7 @@ class LegendaryCore(LegendaryCoreReal):
 
     def __init__(self, *args, **kwargs):
         self.account_manager = AccountManager()
+        self.account_manager.migrate_existing_user()
         self.account_manager.activate_last_used_account()
         super(LegendaryCore, self).__init__(*args, **kwargs)
         self.log.info("Using Rare's LegendaryCore monkey")

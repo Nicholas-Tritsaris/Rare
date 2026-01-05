@@ -64,3 +64,28 @@ class AccountManager:
             except FileNotFoundError:
                 self.active_account_store.unlink(missing_ok=True)
                 self.active_user_file.unlink(missing_ok=True)
+
+    def migrate_existing_user(self):
+        """
+        If a user.json exists, but is not in the accounts folder, add it.
+        This is for migrating existing users to the multi-account system.
+        """
+        if not self.active_user_file.exists():
+            return
+
+        with open(self.active_user_file, "r") as f:
+            try:
+                user_data = json.load(f)
+            except json.JSONDecodeError:
+                return
+
+        account_id = user_data.get("accountId")
+        if not account_id:
+            return
+
+        account_file = self.accounts_path / f"{account_id}.json"
+        if not account_file.exists():
+            shutil.copy(self.active_user_file, account_file)
+
+        if not self.get_active_account_id():
+            self.set_active_account_id(account_id)
