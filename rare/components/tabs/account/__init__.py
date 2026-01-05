@@ -16,18 +16,19 @@ from rare.lgndr.core import LegendaryCore
 from rare.models.signals import GlobalSignals
 from rare.utils.account_manager import AccountManager
 from rare.utils.misc import ExitCodes, qta_icon
-
+from rare.shared import RareCore
 
 class AccountWidget(QWidget):
     # int: exit code
     exit_app: Signal = Signal(int)
     logout: Signal = Signal()
 
-    def __init__(self, signals: GlobalSignals, core: LegendaryCore, parent):
+    def __init__(self, signals: GlobalSignals, rcore: RareCore, parent):
         super(AccountWidget, self).__init__(parent=parent)
         self.signals = signals
-        self.core = core
-        self.account_manager = AccountManager()
+        self.rcore = rcore
+        self.core = rcore.core()
+        self.account_manager = self.rcore.account_manager
 
         self.account_combo = QComboBox()
         accounts = self.account_manager.list_accounts()
@@ -93,4 +94,5 @@ class AccountWidget(QWidget):
 
     @Slot()
     def _on_add_account(self):
+        self.rcore.adding_account = True
         self.exit_app.emit(ExitCodes.LOGOUT)

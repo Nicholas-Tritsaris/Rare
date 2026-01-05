@@ -82,6 +82,10 @@ class Rare(RareApp):
 
     @Slot()
     def __on_start_app(self):
+        if self.rcore.adding_account:
+            self.rcore.account_manager.add_account()
+            self.rcore.adding_account = False
+
         self.relogin_timer = QTimer(self)
         self.relogin_timer.setTimerType(Qt.TimerType.VeryCoarseTimer)
         self.relogin_timer.timeout.connect(self.relogin)

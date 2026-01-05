@@ -17,6 +17,7 @@ from rare.models.game_slim import RareSaveGame
 from rare.models.settings import RareAppSettings
 from rare.models.signals import GlobalSignals
 from rare.utils import config_helper, steam_shortcuts
+from rare.utils.account_manager import AccountManager
 from rare.utils.metrics import timelogger
 
 from .image_manager import ImageManager
@@ -58,6 +59,8 @@ class RareCore(QObject):
         self.__core: Optional[LegendaryCore] = None
         self.__image_manager: Optional[ImageManager] = None
         self.__wrappers: Optional[Wrappers] = None
+        self.account_manager = AccountManager()
+        self.adding_account = False
 
         self.__start_time = time.perf_counter()
 
