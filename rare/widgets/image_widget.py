@@ -128,3 +128,16 @@ class StoreItemImage(ImageWidget):
     def _on_image_ready(self, data, high_res_url: str = None, callback=None):
         super()._on_image_ready(data)
         self.set_url(high_res_url)
+
+
+class LoadingImageWidget(ImageWidget):
+    def __init__(self, manager: QtRequests, parent=None):
+        super().__init__(parent)
+        self.manager = manager
+        self.url = ""
+
+    def fetchPixmap(self, url: str):
+        if url == self.url:
+            return
+        self.url = url
+        self.manager.get(url, self._on_image_ready)
