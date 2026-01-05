@@ -26,8 +26,9 @@ class AccountWidget(QWidget):
     def __init__(self, signals: GlobalSignals, rcore: RareCore, parent):
         super(AccountWidget, self).__init__(parent=parent)
         self.signals = signals
-        self.core = core
-        self.account_manager = AccountManager()
+        self.rcore = rcore
+        self.core = rcore.core()
+        self.account_manager = self.rcore.account_manager
 
         self.account_combo = QComboBox()
         accounts = self.account_manager.list_accounts()
