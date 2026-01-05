@@ -182,7 +182,7 @@ class MainTabWidget(QTabWidget):
             reply = QMessageBox.question(
                 self,
                 self.tr("Logout"),
-                self.tr("Do you really want to logout <b>{}</b>?").format(self.core.lgd.userdata.get("display_name")),
+                self.tr("Do you really want to logout <b>{}</b>?").format(self.core.lgd.userdata.get("displayName")),
                 buttons=(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No),
                 defaultButton=QMessageBox.StandardButton.No,
             )
