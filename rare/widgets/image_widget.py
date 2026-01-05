@@ -1,205 +1,123 @@
-from enum import Enum
-from typing import Dict, Optional, Tuple, Union
+# pylint: disable=R0903
+from logging import getLogger
+from typing import Optional
 
-from PySide6.QtCore import QRectF, QSize, Qt
-from PySide6.QtGui import (
-    QBrush,
-    QColor,
-    QImage,
-    QLinearGradient,
-    QPainter,
-    QPainterPath,
-    QPaintEvent,
-    QPalette,
-    QPixmap,
-    QTransform,
-)
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QPainter, QPixmap
+from PySide6.QtWidgets import QLabel, QWidget
+from shiboken6 import Shiboken
 
-from rare.models.image import ImageSize
 from rare.utils.qt_requests import QtRequests
 
-from .loading_widget import LoadingWidget
 
-OverlayPath = Tuple[QPainterPath, Union[QColor, QLinearGradient]]
+class CoverImage(QLabel):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-
-class ImageWidget(QWidget):
-    class Border(Enum):
-        Rounded = 0
-        Squared = 1
-
-    _rounded_overlay: Optional[OverlayPath] = None
-    _squared_overlay: Optional[OverlayPath] = None
-
-    def __init__(self, parent=None) -> None:
-        super(ImageWidget, self).__init__(parent=parent)
-        self._pixmap: Optional[QPixmap] = None
-        self._opacity: float = 1.0
-        self._transform: QTransform = None
-        self._smooth_transform: bool = False
-        self._image_size: Optional[ImageSize.Preset] = None
-
-        self.setObjectName(type(self).__name__)
-        self.setContentsMargins(0, 0, 0, 0)
-        self.paint_image = self.paint_image_empty
-        self.paint_overlay = self.paint_overlay_rounded
-
-    def setOpacity(self, value: float) -> None:
-        self._opacity = value
-        self.update()
-
-    def setPixmap(self, pixmap: QPixmap) -> None:
-        if not pixmap.isNull():
-            self._pixmap = pixmap
-            self.paint_image = self.paint_image_cover
-            if not self._image_size:
-                self._transform = QTransform().scale(
-                    1 / pixmap.devicePixelRatioF(),
-                    1 / pixmap.devicePixelRatioF(),
-                )
-            else:
-                self._transform = QTransform().scale(
-                    1 / pixmap.devicePixelRatioF() / self._image_size.divisor,
-                    1 / pixmap.devicePixelRatioF() / self._image_size.divisor,
-                )
-        else:
-            self.paint_image = self.paint_image_empty
-        self.update()
-
-    def sizeHint(self) -> QSize:
-        return self._image_size.size if self._image_size else super(ImageWidget, self).sizeHint()
-
-    def minimumSizeHint(self) -> QSize:
-        return self._image_size.size if self._image_size else super(ImageWidget, self).minimumSizeHint()
-
-    def setFixedSize(self, a0: ImageSize.Preset) -> None:
-        self._squared_overlay = None
-        self._rounded_overlay = None
-        self._image_size = a0
-        self._smooth_transform = a0.smooth
-        super(ImageWidget, self).setFixedSize(a0.size)
-
-    def setBorder(self, border: Border):
-        if border == ImageWidget.Border.Rounded:
-            self.paint_overlay = self.paint_overlay_rounded
-        else:
-            self.paint_overlay = self.paint_overlay_squared
-        self.update()
-
-    def _generate_squared_overlay(self) -> OverlayPath:
-        if self._image_size is not None and self._squared_overlay is not None:
-            return self._squared_overlay
-        path = QPainterPath()
-        path.addRect(0, 0, self.width(), self.height())
-        border = 2
-        inner_path = QPainterPath()
-        inner_path.addRect(
-            QRectF(
-                border,
-                border,
-                self.width() - border * 2,
-                self.height() - border * 2,
-            )
-        )
-        gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0.0, Qt.GlobalColor.black)
-        gradient.setColorAt(1.0, Qt.GlobalColor.transparent)
-        self._squared_overlay = path.subtracted(inner_path), gradient
-        return self._squared_overlay
-
-    def _generate_rounded_overlay(self) -> OverlayPath:
-        if self._image_size is not None and self._rounded_overlay is not None:
-            return self._rounded_overlay
-        # lk: the '-1' and '+1' are adjustments required for anti-aliasing
-        # lk: otherwise vertical lines would appear at the edges
-        path = QPainterPath()
-        path.addRect(-1, -1, self.width() + 2, self.height() + 2)
-        rounded_path = QPainterPath()
-        rounded_path.addRoundedRect(
-            QRectF(0, 0, self.width(), self.height()),
-            self.height() * 0.045,
-            self.height() * 0.045,
-        )
-        self._rounded_overlay = path.subtracted(rounded_path), QColor(0, 0, 0, 0)
-        return self._rounded_overlay
-
-    def paint_image_empty(self, painter: QPainter, a0: QPaintEvent) -> None:
-        # when pixmap object is not available yet, show a gray rectangle
-        painter.setOpacity(0.5 * self._opacity)
-        painter.fillRect(a0.rect(), Qt.GlobalColor.darkGray)
-
-    def paint_image_cover(self, painter: QPainter, a0: QPaintEvent) -> None:
-        painter.setOpacity(self._opacity)
-        brush = QBrush(self._pixmap)
-        # downscale the image during painting to fit the pixelratio
-        brush.setTransform(self._transform)
-        painter.fillRect(a0.rect(), brush)
-
-    def paint_overlay_rounded(self, painter: QPainter, a0: QPaintEvent) -> None:
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setOpacity(1.0)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-        overlay, _ = self._generate_rounded_overlay()
-        painter.fillPath(overlay, self.palette().color(QPalette.ColorRole.Window))
-
-    def paint_overlay_squared(self, painter: QPainter, a0: QPaintEvent) -> None:
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.setOpacity(self._opacity)
-        painter.fillPath(*self._generate_squared_overlay())
-
-    def paintEvent(self, a0: QPaintEvent) -> None:
-        painter = QPainter(self)
-        if not painter.paintEngine().isActive():
+    def paintEvent(self, a0) -> None:
+        if not self.pixmap():
             return
-        # helps with better image quality
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, self._smooth_transform)
-        self.paint_image(painter, a0)
-        self.paint_overlay(painter, a0)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        brush = QBrush(self.pixmap())
+        painter.setBrush(brush)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(self.rect(), 7, 7)
+
+
+class ImageWidget(CoverImage):
+    image_loaded = Signal(bool)
+
+    def __init__(self, parent=None, size: Optional[QSize] = None):
+        super(ImageWidget, self).__init__(parent=parent)
+        self.setObjectName(type(self).__name__)
+        self.logger = getLogger(type(self).__name__)
+        self.image_url = None
+        self.image_data = None
+        self.manager = QtRequests(parent=self)
+        if size:
+            self.setFixedSize(size)
+        self.setScaledContents(False)
+        self._loading = False
+        self._loaded = False
+        self.image_loaded.connect(self.on_image_loaded)
+
+    def on_image_loaded(self, loaded: bool):
+        self._loaded = loaded
+        self._loading = False
+
+    @property
+    def loaded(self) -> bool:
+        return self._loaded
+
+    @property
+    def loading(self) -> bool:
+        return self._loading
+
+    def setPixmap(self, a0: QPixmap) -> None:
+        if self.size().width() > self.size().height():
+            super(ImageWidget, self).setPixmap(a0.scaledToWidth(self.size().width()))
+        else:
+            super(ImageWidget, self).setPixmap(a0.scaledToHeight(self.size().height()))
+        self.update()
+
+    def set_faded_pixmap(self, pixmap: QPixmap, fade_color: str):
+        if not pixmap:
+            return
+        image = pixmap.toImage()
+        painter = QPainter(image)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(image.rect(), QColor(fade_color))
         painter.end()
+        faded_pixmap = QPixmap.fromImage(image)
+        self.setPixmap(faded_pixmap)
 
+    def set_url(self, url: str, high_res_url: str = None, callback=None) -> None:
+        if not url or self.image_url == url:
+            return
+        self.image_url = url
+        self._loading = True
+        self.manager.get(url, lambda data: self._on_image_ready(data, high_res_url, callback))
 
-class LoadingImageWidget(ImageWidget):
-    def __init__(self, manager: QtRequests, parent=None):
-        super(LoadingImageWidget, self).__init__(parent=parent)
-        self.manager = manager
+    def _on_image_ready(self, data, high_res_url: str = None, callback=None):
+        # Check if the C++ object is still alive, otherwise it will crash
+        if not Shiboken.isValid(self):
+            self.logger.debug("ImageWidget is no longer valid, skipping pixmap set")
+            return
 
-    def fetchPixmap(self, url: str, params: Dict = None):
-        self.setPixmap(QPixmap())
-        self.manager.get(url, self._on_image_ready, params=params)
-
-    def _on_image_ready(self, data):
-        cover = QImage()
+        self.image_data = data
+        cover = QPixmap()
         cover.loadFromData(data)
-        cover.setDevicePixelRatio(self._image_size.base.pixel_ratio)
-        if cover.size() != self._image_size.base.size:
-            cover = cover.scaled(
-                self._image_size.base.size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-            )
-        cover = cover.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
-        cover = QPixmap(cover)
+        if not cover.isNull():
+            self.image_loaded.emit(True)
+        else:
+            self.image_loaded.emit(False)
         self.setPixmap(cover)
+        if callback:
+            callback(data)
+        if high_res_url:
+            self.manager.get(high_res_url, lambda data: self._on_high_res_ready(data, callback))
+
+    def _on_high_res_ready(self, data, callback=None):
+        self.image_data = data
+        cover = QPixmap()
+        cover.loadFromData(data)
+        self.setPixmap(cover)
+        if callback:
+            callback(data)
+
+    def sizeHint(self):
+        return self.size()
+
+    def heightForWidth(self, w: int) -> int:
+        return int(w / 1.5)
 
 
-class LoadingSpinnerImageWidget(LoadingImageWidget):
-    def __init__(self, manager: QtRequests, parent=None):
-        super(LoadingSpinnerImageWidget, self).__init__(manager, parent=parent)
-        self.spinner = LoadingWidget(parent=self)
-        self.spinner.setVisible(False)
+class StoreItemImage(ImageWidget):
+    def __init__(self, parent=None, size: Optional[QSize] = None):
+        super().__init__(parent, size)
 
-    def fetchPixmap(self, url: str, params: Dict = None):
-        self.spinner.setFixedSize(self._image_size.size)
-        self.spinner.start()
-        params = {
-            "resize": 1,
-            "w": self._image_size.base.size.width(),
-            "h": self._image_size.base.size.height(),
-        } if not params else params
-        super().fetchPixmap(url, params=params)
-
-    def _on_image_ready(self, data):
+    def _on_image_ready(self, data, high_res_url: str = None, callback=None):
         super()._on_image_ready(data)
-        self.spinner.stop()
-
-
-__all__ = ["ImageSize", "ImageWidget", "LoadingImageWidget", "LoadingSpinnerImageWidget"]
+        self.set_url(high_res_url)
