@@ -1,6 +1,6 @@
 from PySide6.QtGui import QHideEvent, QShowEvent
 
-from rare.shared import RareCore
+from rare.lgndr.core import LegendaryCore
 from rare.widgets.side_tab import SideTabWidget
 
 from .landing import LandingPage
@@ -10,17 +10,17 @@ from .wishlist import WishlistPage
 
 
 class StoreTab(SideTabWidget):
-    def __init__(self, rcore: RareCore, parent=None):
+    def __init__(self, core: LegendaryCore, parent=None):
         super(StoreTab, self).__init__(parent=parent)
         self.init = False
 
-        self.rcore = rcore
-        self.core = self.rcore.core()
+        self.core = core
+        # self.rcore = rcore
         self.api = StoreAPI(
             self.core.egs.session.headers["Authorization"],
             self.core.language_code,
             self.core.country_code,
-            [i.asset_infos["Windows"].namespace for i in self.rcore.game_list if bool(i.asset_infos)],
+            [],  # [i.asset_infos["Windows"].namespace for i in self.rcore.game_list if bool(i.asset_infos)]
         )
 
         self.landing = LandingPage(self.api, parent=self)

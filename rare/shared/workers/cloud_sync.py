@@ -42,3 +42,4 @@ class CloudSyncWorker(QueueWorker):
             self.rgame.upload_saves()
         if self.mode == CloudSyncWorker.Mode.DOWNLOAD:
             self.rgame.download_saves()
+        self.rgame.state = RareGameSlim.State.IDLE
