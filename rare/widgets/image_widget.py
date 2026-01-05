@@ -1,6 +1,7 @@
 # pylint: disable=R0903
 from logging import getLogger
 from typing import Optional
+from enum import Enum, auto
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPixmap
@@ -8,6 +9,12 @@ from PySide6.QtWidgets import QLabel, QWidget
 from shiboken6 import Shiboken
 
 from rare.utils.qt_requests import QtRequests
+
+
+class ImageSize(Enum):
+    Icon = auto()
+    LibraryIcon = auto()
+    StoreItem = auto()
 
 
 class CoverImage(QLabel):
